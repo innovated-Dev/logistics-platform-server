@@ -1,0 +1,475 @@
+# ============================================================
+# OffScape — Full Auth & Email Test Suite
+# VS Code REST Client (.rest)
+#
+# HOW TO USE:
+# 1. Install "REST Client" extension by Humao in VS Code
+# 2. Replace BASE_URL, TEST_EMAIL, and TEST_PHONE below
+# 3. Run each request top to bottom IN ORDER
+# 4. After each login/signup, copy the accessToken from the
+#    response and paste it into @accessToken below
+# 5. After verify-reset-otp, copy resetToken into @resetToken
+# ============================================================
+
+# ── GLOBAL VARIABLES — edit these before running ──
+@baseUrl     = http://localhost:4000
+@testEmail   = darkroomwebmailservice@gmail.com
+@testPhone   = 08050645217
+@testPass    = Password123!
+@newPass     = NewPassword456!
+
+# ── Paste tokens here after receiving them in responses ──
+@accessToken = PASTE_ACCESS_TOKEN_HERE
+@resetToken  = PASTE_RESET_TOKEN_HERE
+
+#====== INITIAL SIGN UP ========
+POST {{baseUrl}}/api/auth/rider/signup
+Content-Type: application/json
+
+{
+  "firstName": "Ayinde",
+  "lastName": "Taofeek",
+  "email": "{{testEmail}}",
+  "phone": "{{testPhone}}",
+  "city": "ibadan",
+  "operatingZoneId": "69f297aceea659cd534bf61e",
+  "vehicleType": "motorcycle",
+  "vehicleModel": "Honda CB125",
+  "plateNumber": "ABC-123-DE",
+  "nin": "12345678901",
+  "guarantorFullName": "Rayo Mistress",
+  "guarantorPhone": "08012345678",
+  "guarantorRelationship": "Siblings",
+  "password": "{{testPass}}"
+}
+
+###
+
+# ============================================================
+# SECTION 1 — EMAIL SERVICE DIRECT TESTS
+# Run these first to confirm every email template works
+# before testing the auth flow that triggers them
+# ============================================================
+
+
+# ── 1.1 Password Reset OTP Email ──────────────────────────
+# Triggers: sendPasswordResetOTP()
+# Expected: Email arrives with a 6-digit OTP code in big text
+# Check: OTP visible, expiry time shown, "do not share" note
+
+POST {{baseUrl}}/api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}"
+}
+
+
+###
+
+
+# ── 1.2 OTP Resend Email ──────────────────────────────────
+# Triggers: sendResendResetOTP()
+# Expected: New OTP email with "resends remaining" count
+# Check: New code is different from the first one
+# NOTE: Must wait 60 seconds after 1.1 (cooldown enforced)
+
+POST {{baseUrl}}/api/auth/resend-reset-otp
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}"
+}
+
+
+###
+
+
+# ── 1.3 Password Reset Link Email ────────────────────────
+# Triggers: sendPasswordResetLink()
+# Expected: Email with a clickable reset link (15 min expiry)
+# Check: Link contains a JWT token and goes to /reset-password
+# NOTE: First complete step 1.1, check your email for the OTP,
+#       then paste it into the otp field below
+
+POST {{baseUrl}}/api/auth/verify-reset-otp
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "otp": "PASTE_OTP_FROM_EMAIL_HERE"
+}
+
+
+###
+
+
+# ── 1.4 Password Change Confirmation Email ────────────────
+# Triggers: sendPasswordChangeConfirmation()
+# Expected: Security confirmation email saying password changed
+# Check: "If you didn't make this change" warning is present
+# NOTE: Copy the resetToken from the 1.3 response into
+#       @resetToken at the top of this file before running
+
+POST {{baseUrl}}/api/auth/reset-password
+Authorization: Bearer {{resetToken}}
+Content-Type: application/json
+
+{
+  "password": "{{newPass}}"
+}
+
+
+###
+
+
+# ── 1.5 KYC Approved Email ───────────────────────────────
+# Triggers: sendKycApproved()
+# Expected: Celebratory email with "Sign In & Start Earning" CTA
+# NOTE: This requires an admin action — use your admin route.
+#       Replace RIDER_USER_ID with an actual rider's _id from DB
+
+POST {{baseUrl}}/api/admin/kyc/approve
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "userId": "PASTE_RIDER_USER_ID_HERE"
+}
+
+
+###
+
+
+# ── 1.6 KYC Rejected Email ───────────────────────────────
+# Triggers: sendKycRejected()
+# Expected: Email with rejection reason and resubmit CTA
+# NOTE: Replace RIDER_USER_ID same as above
+
+POST {{baseUrl}}/api/admin/kyc/reject
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "userId": "PASTE_RIDER_USER_ID_HERE",
+  "reason": "Your NIN document photo is blurry. Please upload a clear, well-lit image."
+}
+
+
+###
+
+
+# ============================================================
+# SECTION 2 — FULL AUTH FLOW END TO END
+# Run in order. Each step feeds into the next.
+# ============================================================
+
+
+# ── 2.1 SIGN UP ──────────────────────────────────────────
+# Expected response: 201, success: true, NO accessToken
+# Expected email: Verification email arrives in inbox
+# Check DB: emailVerified = false, emailVerifyToken is set
+# What to do next: Click the link in your email
+
+POST {{baseUrl}}/api/auth/customer/signup
+Content-Type: application/json
+
+{
+  "firstName": "Test",
+  "lastName":  "User",
+  "email":     "{{testEmail}}",
+  "phone":     "{{testPhone}}",
+  "password":  "{{testPass}}",
+  "city":      "Ibadan"
+}
+
+
+###
+
+
+# ── 2.2 LOGIN BEFORE EMAIL VERIFIED ──────────────────────
+# Expected response: depends on your design decision —
+# either 403 "please verify your email" or allowed with warning
+# This tells you what your login controller does with
+# unverified accounts — important to know and handle in frontend
+
+POST {{baseUrl}}/api/auth/customer/login
+Content-Type: application/json
+
+{
+  "email":    "{{testEmail}}",
+  "password": "{{testPass}}"
+}
+
+
+###
+
+
+# ── 2.3 RESEND VERIFICATION (expired/missed email) ───────
+# Expected response: 200, success: true, vague message
+# Expected email: Fresh verification link arrives
+# NOTE: This endpoint must NOT require Authorization header
+# If you get 401 here, the protect middleware is still on the route
+
+POST {{baseUrl}}/api/auth/resend-verification
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}"
+}
+
+
+###
+
+
+# ── 2.4 RESEND COOLDOWN CHECK ────────────────────────────
+# Expected response: 429 with waitSeconds in body
+# Run this immediately after 2.3 — should be blocked
+# Confirms your per-user cooldown logic is working
+
+POST {{baseUrl}}/api/auth/resend-verification
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}"
+}
+
+
+###
+
+
+# ── 2.5 LOGIN AFTER EMAIL VERIFIED ───────────────────────
+# Do this AFTER clicking the verification link in your email
+# Expected response: 200, accessToken present, user object
+# Expected: refreshToken cookie set (check VS Code response headers)
+# ACTION: Copy the accessToken value into @accessToken at the top
+
+POST {{baseUrl}}/api/auth/customer/login
+Content-Type: application/json
+
+{
+  "email":    "{{testEmail}}",
+  "password": "{{testPass}}"
+}
+
+
+###
+
+
+# ── 2.6 GET ME (verify session is live) ──────────────────
+# Expected response: 200, user object, authenticated: true
+# If you get 401 here, your accessToken is wrong or expired
+
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{accessToken}}
+
+
+###
+
+
+# ── 2.7 REMEMBER ME — REFRESH TOKEN ROTATION ─────────────
+# Expected response: 200, new accessToken in body
+# Expected: new refreshToken cookie replaces old one
+# This simulates what happens when the 1hr access token expires
+# and the frontend silently calls /refresh to get a new one
+# NOTE: refreshToken is sent automatically via cookie —
+#       REST Client sends cookies if you're on the same origin.
+#       If it returns 401, manually copy the cookie from 2.5 response.
+
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+
+
+###
+
+
+# ── 2.8 BRUTE FORCE PROTECTION CHECK ─────────────────────
+# Expected: first 5 fail with attemptsLeft counting down,
+#           6th attempt returns 423 locked
+# Run this block 6 times by clicking "Send Request" repeatedly
+# Check DB after: loginAttempts should be 5, lockUntil should be set
+
+POST {{baseUrl}}/api/auth/customer/login
+Content-Type: application/json
+
+{
+  "email":    "{{testEmail}}",
+  "password": "deliberatelywrongpassword"
+}
+
+
+###
+
+
+# ── 2.9 FORGOT PASSWORD ──────────────────────────────────
+# Expected response: 200 with vague message (even if email wrong)
+# Expected email: OTP arrives in inbox
+# NOTE: Uses newPass now since you reset it in 1.4 above
+#       If you skipped section 1, use testPass instead
+
+POST {{baseUrl}}/api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}"
+}
+
+
+###
+
+
+# ── 2.10 VERIFY RESET OTP ────────────────────────────────
+# Expected response: 200, resetToken in body
+# Expected email: Password reset link arrives
+# ACTION: Paste OTP from your email, then copy resetToken
+#         from the response into @resetToken at the top
+
+POST {{baseUrl}}/api/auth/verify-reset-otp
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "otp":   "PASTE_OTP_FROM_EMAIL_HERE"
+}
+
+
+###
+
+
+# ── 2.11 RESET PASSWORD ──────────────────────────────────
+# Expected response: 200 success, "Please sign in" message
+# Expected email: Password change confirmation arrives
+# Expected DB: all sessions revoked, tokenVersion incremented
+# NOTE: The password must differ from your current one
+
+POST {{baseUrl}}/api/auth/reset-password
+Authorization: Bearer {{resetToken}}
+Content-Type: application/json
+
+{
+  "password": "{{testPass}}"
+}
+
+
+###
+
+
+# ── 2.12 LOGIN WITH NEW PASSWORD ─────────────────────────
+# Expected response: 200, fresh accessToken
+# ACTION: Copy new accessToken into @accessToken at top
+
+POST {{baseUrl}}/api/auth/customer/login
+Content-Type: application/json
+
+{
+  "email":    "{{testEmail}}",
+  "password": "{{testPass}}"
+}
+
+
+###
+
+
+# ── 2.13 CHANGE PASSWORD (while logged in) ───────────────
+# Expected response: 200, new accessToken (current device kept)
+# Expected email: Password change confirmation arrives
+# Expected DB: tokenVersion incremented, other sessions revoked
+
+PATCH {{baseUrl}}/api/auth/change-password
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "currentPassword": "{{testPass}}",
+  "newPassword":     "{{newPass}}"
+}
+
+
+###
+
+
+# ── 2.14 OLD TOKEN REJECTED AFTER CHANGE ─────────────────
+# Expected response: 401 unauthorized
+# This proves tokenVersion invalidation is working —
+# the old accessToken from before the password change is dead
+
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{accessToken}}
+
+
+###
+
+
+# ── 2.15 LOGOUT ──────────────────────────────────────────
+# Expected response: 200 success
+# Expected: refreshToken cookie cleared
+# Expected DB: session document deleted
+# First login again with newPass to get a fresh token
+
+POST {{baseUrl}}/api/auth/customer/login
+Content-Type: application/json
+
+{
+  "email":    "{{testEmail}}",
+  "password": "{{newPass}}"
+}
+
+###
+
+# Then logout with the new token (update @accessToken first)
+POST {{baseUrl}}/api/auth/logout
+Authorization: Bearer {{accessToken}}
+
+
+###
+
+
+# ── 2.16 ACCESS AFTER LOGOUT ─────────────────────────────
+# Expected response: 401 unauthorized
+# Confirms the access token was blocklisted in Redis
+# and the refresh token was revoked in the DB
+
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{accessToken}}
+
+
+###
+
+
+# ============================================================
+# SECTION 3 — RATE LIMITER VERIFICATION
+# These confirm your Redis-backed limiters are firing
+# ============================================================
+
+
+# ── 3.1 Login Rate Limiter ────────────────────────────────
+# Run this 6 times rapidly with wrong password
+# Expected: 429 on the 6th attempt with tooManyRequests: true
+# Confirms: loginLimiter (5 per 15 min) is active
+
+POST {{baseUrl}}/api/auth/customer/login
+Content-Type: application/json
+
+{
+  "email":    "ratelimittest@fake.com",
+  "password": "wrongpassword"
+}
+
+
+###
+
+
+# ── 3.2 OTP Resend Rate Limiter ───────────────────────────
+# Run this 4 times
+# Expected: 429 on the 4th attempt
+# Confirms: otpResendLimiter (3 per hour) is active
+
+POST {{baseUrl}}/api/auth/resend-reset-otp
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}"
+}
+
+
+###
