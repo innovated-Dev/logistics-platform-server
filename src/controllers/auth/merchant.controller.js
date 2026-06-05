@@ -6,7 +6,7 @@ import User      from '../../models/base/user.base.js';
 import { issueTokens } from '../auth/auth.base.js';
 import { sendEmailVerification } from '../../services/emailService.js';
 import { ConflictError, AuthError } from '../../utils/errors.js';
-import { env } from '../../config/env.js';
+import  env  from '../../config/env.js';
 
 // ── POST /api/auth/merchant/signup ──
 // Validation: merchantSignupSchema applied on route

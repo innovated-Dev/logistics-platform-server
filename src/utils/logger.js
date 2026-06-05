@@ -3,8 +3,9 @@
 // In development: colourised, human-readable console output
 // Every log line carries a timestamp and the worker process ID,
 // which is critical for debugging cluster-mode issues.
+
+import env  from '../config/env.js';
 import winston from 'winston';
-import { env }  from '../config/env.js';
 
 const { combine, timestamp, printf, colorize, json } = winston.format;
 

@@ -17,7 +17,7 @@ const orderSchema = new mongoose.Schema({
   // ── Parties ──
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   merchant: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },  // null for direct customer orders
-  rider:    { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  pickman:    { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 
   // ── Pickup ──
   pickup: {
@@ -95,10 +95,10 @@ const orderSchema = new mongoose.Schema({
     status:    String,
     timestamp: { type: Date, default: Date.now },
     note:      String,
-    actor:     String,  // 'system' | 'customer' | 'rider' | 'admin'
+    actor:     String,  // 'system' | 'customer' | 'pickman' | 'admin'
   }],
 
-  // ── GPS trail — every Socket.IO ping from the rider is saved here ──
+  // ── GPS trail — every Socket.IO ping from the pickman is saved here ──
   // This is the evidence record for disputes. It means the DB grows with
   // each delivery, but it's the right tradeoff for trust infrastructure.
   gpsTrail: [{
@@ -109,7 +109,7 @@ const orderSchema = new mongoose.Schema({
 
   // ── Cancellation ──
   cancellation: {
-    cancelledBy: String,   // 'customer' | 'merchant' | 'rider' | 'system'
+    cancelledBy: String,   // 'customer' | 'merchant' | 'pickman' | 'system'
     reason:      String,
     cancelledAt: Date,
     type:        { type: String, enum: ['early','late'] },
@@ -142,7 +142,7 @@ const orderSchema = new mongoose.Schema({
 
   // ── Assignment tracking — who was offered the job before acceptance ──
   assignmentLog: [{
-    rider:       { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    pickman:       { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     offeredAt:   { type: Date, default: Date.now },
     response:    { type: String, enum: ['pending','accepted','declined','timeout'], default: 'pending' },
     respondedAt: Date,
@@ -154,7 +154,7 @@ const orderSchema = new mongoose.Schema({
   bidWindowEnds:  Date,     // for 'open_bid' mode
 
   bids: [{
-    rider:       { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    pickman:       { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     amount:      Number,
     note:        String,
     submittedAt: { type: Date, default: Date.now },
@@ -163,7 +163,7 @@ const orderSchema = new mongoose.Schema({
 
   // ── Ratings ──
   customerRating: { type: Number, min: 1, max: 5 },
-  riderRating:    { type: Number, min: 1, max: 5 },
+  pickmanRating:    { type: Number, min: 1, max: 5 },
   ratingNote:     String,
 
   deliveredAt: Date,
@@ -174,8 +174,8 @@ const orderSchema = new mongoose.Schema({
 // Customer/merchant see their own orders
 orderSchema.index({ customer: 1, status: 1, createdAt: -1 });
 orderSchema.index({ merchant: 1, status: 1, createdAt: -1 });
-// Rider sees their assigned orders
-orderSchema.index({ rider: 1, status: 1, createdAt: -1 });
+// pickman sees their assigned orders
+orderSchema.index({ pickman: 1, status: 1, createdAt: -1 });
 // Admin filters by city, status, date
 orderSchema.index({ 'pickup.zone': 1, status: 1 });
 orderSchema.index({ createdAt: -1 });

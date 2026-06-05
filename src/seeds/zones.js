@@ -47,7 +47,7 @@ function zone(name, slug, city, minLng, minLat, maxLng, maxLat) {
     boundary: rect(minLng, minLat, maxLng, maxLat),
     centroid:  centroid(minLng, minLat, maxLng, maxLat),
     isActive:  true,
-    ridersOnline: 0,
+    pickmenOnline: 0,
   };
 }
 
@@ -152,7 +152,7 @@ const lagosZones = [
 
   zone('Maryland',        'maryland',        'lagos', 3.352, 6.542, 3.375, 6.560),
   // Maryland: residential + commercial — Ikeja adjacent
-  // Mid-range demand, good rider availability
+  // Mid-range demand, good pickman availability
 
   zone('Ikorodu',         'ikorodu',         'lagos', 3.502, 6.580, 3.540, 6.608),
   // Ikorodu: far north-eastern Lagos — fast growing
@@ -189,7 +189,7 @@ async function seed() {
 
   // Print all zone IDs — useful for testing
   const all = await Zone.find({}, 'name slug city _id').sort({ city: 1, name: 1 });
-  console.log('\nZone reference (use _id in rider signup):');
+  console.log('\nZone reference (use _id in pickman signup):');
   console.table(all.map(z => ({ city: z.city, name: z.name, slug: z.slug, _id: z._id.toString() })));
 
   await mongoose.disconnect();

@@ -8,7 +8,7 @@ import { ok }             from '../../utils/response.js';
 import { ValidationError } from '../../utils/errors.js';
 
 // ── GET /api/zones?city=ibadan ──
-// Public — called by rider signup and customer order form
+// Public — called by pickman signup and customer order form
 // Returns only _id, name, slug — never sends boundary polygon to frontend
 export async function getZones(req, res, next) {
   try {

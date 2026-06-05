@@ -2,19 +2,19 @@
 import Order   from '../../models/Order.js';
 import Wallet  from '../../models/Wallet.js';
 import Config  from '../../models/Config.js';
-import { env } from '../../config/env.js';
-import { assignRiderToOrder } from '../../services/orderService.js';
+import  env  from '../../config/env.js';
+import { assignPickmanToOrder } from '../../services/orderService.js';
 
 // FIX: was '../models/User.js' (old monolithic model)
 import User from '../../models/base/user.base.js';
 
 import { calculateFees }  from '../../services/feeCalculator.js';
-import { geocodeAddress, resolveZone, findNearestRiders } from '../../services/zoneEngine.js';
+import { geocodeAddress, resolveZone, findNearestPickmen } from '../../services/zoneEngine.js';
 import { initializePayment } from '../../services/paystackService.js';
 import {
   sendOTP, verifyOTP,
-  smsOrderPlaced, smsRiderAssigned,
-  smsOrderDelivered, smsRiderPayout, smsCodOtp,
+  smsOrderPlaced, smsPickmanAssigned,
+  smsOrderDelivered, smsPickmanPayout, smsCodOtp,
 } from '../../services/smsService.js';
 import { NotFoundError, ValidationError, PaymentError, ForbiddenError } from '../../utils/errors.js';
 import { ok, created } from '../../utils/response.js';
@@ -26,13 +26,14 @@ import { logger } from '../../utils/logger.js';
 export async function createOrder(req, res, next) {
   try {
     const io = getSocketServer();
-    const { pickup, delivery, package: pkg, payment, assignmentMode, budgetCap } = req.body;
+    const { pickup, delivery, package: pkg, payment, assignmentMode, budgetCap } = req.sanitizedData;
 
     const pickupCoords   = await geocodeAddress(pickup.address, req.user.city);
     const deliveryCoords = await geocodeAddress(delivery.address, req.user.city);
 
     const pickupZone   = await resolveZone(pickupCoords.lat, pickupCoords.lng);
     const deliveryZone = await resolveZone(deliveryCoords.lat, deliveryCoords.lng);
+    
 
     // Server-side fee calc — frontend value is never trusted
     const fees = await calculateFees({
@@ -48,8 +49,22 @@ export async function createOrder(req, res, next) {
 
     const orderData = {
       customer:       req.user._id,
-      pickup:         { ...pickup,   coordinates: pickupCoords,   zone: pickupZone?._id },
-      delivery:       { ...delivery, coordinates: deliveryCoords, zone: deliveryZone?._id },
+      pickup: {
+        address:       pickup.address,
+        landmark:      pickup.landmark,
+        senderName:    pickup.senderName,      
+        senderPhone:   pickup.senderPhone,     
+        coordinates:   pickupCoords,
+        zone:          pickupZone?._id,
+      },
+      delivery: {
+        address:       delivery.address,
+        landmark:      delivery.landmark,
+        recipientName: delivery.recipientName, 
+        recipientPhone: delivery.recipientPhone, 
+        coordinates:   deliveryCoords,
+        zone:          deliveryZone?._id,
+      },
       package:        pkg,
       fees,
       payment:        { method: payment.method, status: 'pending' },
@@ -140,24 +155,24 @@ export async function dispatchOrder(orderId, io) {
       return;
     }
 
-    const riders = await findNearestRiders(order.pickup.zone, order.pickup.coordinates, 3);
-    if (!riders.length) {
-      logger.warn(`No available riders for order ${orderId}`);
-      io?.to(`user:${order.customer}`).emit('order:no_riders', {
+    const pickmen = await findNearestPickmen(order.pickup.zone, order.pickup.coordinates, 3);
+    if (!pickmen.length) {
+      logger.warn(`No available Pickmen for order ${orderId}`);
+      io?.to(`user:${order.customer}`).emit('order:no_pickmen', {
         orderId,
-        message: 'No riders available in your zone right now. Please try again shortly.',
+        message: 'No Pickmen available in your zone right now. Please try again shortly.',
       });
       return;
     }
 
     const cfg        = await Config.findOne({ singleton: 'main' });
     const timeoutSec = cfg?.assignment?.timeoutSeconds || 90;
-    const logEntries = riders.map(r => ({ rider: r._id, offeredAt: new Date(), response: 'pending' }));
+    const logEntries = pickmen.map(r => ({ pickman: r._id, offeredAt: new Date(), response: 'pending' }));
 
     await Order.findByIdAndUpdate(orderId, { $push: { assignmentLog: { $each: logEntries } } });
 
-    for (const rider of riders) {
-      io?.to(`user:${rider._id}`).emit('new:job:offer', {
+    for (const pickman of pickmen) {
+      io?.to(`user:${pickman._id}`).emit('new:job:offer', {
         orderId:   order._id,
         orderRef:  order.orderRef,
         pickup:    { address: order.pickup.address, coordinates: order.pickup.coordinates },
@@ -180,19 +195,19 @@ export async function dispatchOrder(orderId, io) {
   }
 }
 
-// ── POST /api/riders/accept/:orderId ──
+// ── POST /api/pickmen/accept/:orderId ──
 // Validation: no body schema needed — orderId is a URL param
 export async function acceptOrder(req, res, next) {
   try {
     const { orderId } = req.params;
-    const riderId = req.user._id;
+    const pickmanId = req.user._id;
     const io = getSocketServer();
 
     const order = await Order.findOneAndUpdate(
       { _id: orderId, status: 'pending' },
       {
-        $set:  { rider: riderId, status: 'assigned' },
-        $push: { timeline: { status: 'assigned', note: 'Rider accepted', actor: 'rider' } },
+        $set:  { pickman: pickmanId, status: 'assigned' },
+        $push: { timeline: { status: 'assigned', note: 'Pickman accepted', actor: 'Pickman' } },
       },
       { new: true }
     ).populate('customer', 'name phone');
@@ -201,16 +216,16 @@ export async function acceptOrder(req, res, next) {
       throw new ValidationError('Order is no longer available (already assigned or cancelled)');
 
     await Order.updateOne(
-      { _id: orderId, 'assignmentLog.rider': riderId },
+      { _id: orderId, 'assignmentLog.pickman': pickmanId },
       { $set: { 'assignmentLog.$.response': 'accepted', 'assignmentLog.$.respondedAt': new Date() } }
     );
 
-    const rider = req.user;
-    io?.to(`user:${order.customer._id}`).emit('order:rider_assigned', {
+    const pickman = req.user;
+    io?.to(`user:${order.customer._id}`).emit('order:pickman_assigned', {
       orderId,
-      rider: { name: rider.name, phone: rider.phone, rating: rider.rating },
+      pickman: { name: pickman.name, phone: pickman.phone, rating: pickman.rating },
     });
-    smsRiderAssigned(order.customer.phone, rider.name, rider.phone, order.orderRef);
+    smsPickmanAssigned(order.customer.phone, pickman.name, pickman.phone, order.orderRef);
 
     ok(res, { order, message: 'Job accepted! Navigate to pickup location.' });
   } catch (err) {
@@ -231,19 +246,19 @@ export async function cancelOrder(req, res, next) {
 
     const isCustomer = order.customer.toString() === req.user._id.toString();
     const isMerchant = order.merchant?.toString() === req.user._id.toString();
-    const isRider    = order.rider?.toString()    === req.user._id.toString();
+    const isPickman    = order.pickman?.toString()    === req.user._id.toString();
     const isAdmin    = req.user.role === 'admin';
-    if (!isCustomer && !isMerchant && !isRider && !isAdmin)
+    if (!isCustomer && !isMerchant && !isPickman && !isAdmin)
       throw new ForbiddenError('Not authorised to cancel this order');
 
     const minutesSinceCreated = (Date.now() - new Date(order.createdAt).getTime()) / 60000;
-    const riderEnRoute = order.status === 'pickup_in_progress';
+    const pickmanEnRoute = order.status === 'pickup_in_progress';
     const cfg = await Config.findOne({ singleton: 'main' });
     const earlyWindowMin = cfg?.cancellation?.earlyWindowMinutes || 5;
 
     let cancellationType, compensationAmount = 0, lateFeeCharged = 0;
 
-    if (minutesSinceCreated <= earlyWindowMin && !riderEnRoute) {
+    if (minutesSinceCreated <= earlyWindowMin && !PickmanEnRoute) {
       cancellationType   = 'early';
       compensationAmount = cfg?.cancellation?.earlyCompensation || 300;
 
@@ -252,20 +267,20 @@ export async function cancelOrder(req, res, next) {
         await wallet.credit(order.fees.total, `Refund: cancelled order ${order.orderRef}`, order._id);
       }
 
-      if (order.rider) {
+      if (order.pickman) {
         const adminWallet = await Wallet.findOne({ owner: await getAdminId() });
         if (adminWallet && adminWallet.compensationPool >= compensationAmount) {
           adminWallet.compensationPool -= compensationAmount;
           await adminWallet.save();
-          const riderWallet = await Wallet.findOne({ owner: order.rider });
-          await riderWallet.credit(
+          const pickmanWallet = await Wallet.findOne({ owner: order.pickman });
+          await pickmanWallet.credit(
             compensationAmount,
             `Cancellation compensation: ${order.orderRef}`,
             order._id
           );
         }
       }
-    } else if (riderEnRoute) {
+    } else if (pickmanEnRoute) {
       cancellationType = 'late';
       const lateRate   = cfg?.cancellation?.lateCancelChargeRate || 50;
       lateFeeCharged   = Math.round(order.fees.total * (lateRate / 100));
@@ -277,9 +292,9 @@ export async function cancelOrder(req, res, next) {
         } catch (_) {
           lateFeeCharged = 0;
         }
-        if (order.rider && lateFeeCharged > 0) {
-          const riderWallet = await Wallet.findOne({ owner: order.rider });
-          await riderWallet.credit(
+        if (order.pickman && lateFeeCharged > 0) {
+          const pickmanWallet = await Wallet.findOne({ owner: order.pickman });
+          await pickmanWallet.credit(
             lateFeeCharged,
             `Late cancellation payment: ${order.orderRef}`,
             order._id
@@ -307,7 +322,7 @@ export async function cancelOrder(req, res, next) {
     order.timeline.push({ status: 'cancelled', note: reason || 'Cancelled', actor: req.user.role });
     await order.save();
 
-    if (order.rider) io?.to(`user:${order.rider}`).emit('order:cancelled', { orderId: id, reason });
+    if (order.pickman) io?.to(`user:${order.pickman}`).emit('order:cancelled', { orderId: id, reason });
     io?.to(`user:${order.customer}`).emit('order:cancelled', { orderId: id, reason });
 
     ok(res, { order, cancellationType, compensationAmount, lateFeeCharged });
@@ -343,43 +358,43 @@ export async function confirmDelivery(req, res, next) {
     order.timeline.push({ status: 'delivered', note: 'Confirmed by customer/OTP', actor: 'customer' });
     await order.save();
 
-    const riderEarnings = order.fees.total - order.fees.platformFee;
+    const padStartickmanEarnings = order.fees.total - order.fees.platformFee;
 
     if (order.payment.method !== 'cod') {
-      const riderWallet = await Wallet.findOne({ owner: order.rider });
-      await riderWallet.credit(riderEarnings, `Delivery payout: ${order.orderRef}`, order._id);
+      const packageickmanWallet = await Wallet.findOne({ owner: order.pickman });
+      await pickmanWallet.credit(pickmanEarnings, `Delivery payout: ${order.orderRef}`, order._id);
     } else {
-      const riderWallet = await Wallet.findOne({ owner: order.rider });
-      riderWallet.codPendingDebit = (riderWallet.codPendingDebit || 0) + order.fees.platformFee;
+      const pickmanWallet = await Wallet.findOne({ owner: order.pickman });
+      pickmanWallet.codPendingDebit = (pickmanWallet.codPendingDebit || 0) + order.fees.platformFee;
       order.cod.feeDebited = true;
-      await riderWallet.save();
+      await pickmanWallet.save();
       await order.save();
     }
 
-    await User.findByIdAndUpdate(order.rider, { $inc: { totalDeliveries: 1 } });
+    await User.findByIdAndUpdate(order.pickman, { $inc: { totalDeliveries: 1 } });
 
-    io?.to(`user:${order.rider}`).emit('order:delivered', { orderId: id, earnings: riderEarnings });
+    io?.to(`user:${order.pickman}`).emit('order:delivered', { orderId: id, earnings: pickmanEarnings });
     smsOrderDelivered(order.delivery.recipientPhone || '', order.orderRef);
 
     if (order.payment.method !== 'cod') {
-      const riderDoc = await User.findById(order.rider).select('phone').lean();
-      smsRiderPayout(riderDoc?.phone || '', riderEarnings, order.orderRef);
+      const pickmanDoc = await User.findById(order.pickman).select('phone').lean();
+      smsPickmanPayout(pickmanDoc?.phone || '', pickmanEarnings, order.orderRef);
     }
 
-    ok(res, { order, riderEarnings });
+    ok(res, { order, pickmanEarnings });
   } catch (err) {
     next(err);
   }
 }
 
-// ── PATCH /api/orders/:id/rider-arrived ──
-export async function riderArrived(req, res, next) {
+// ── PATCH /api/orders/:id/pickman-arrived ──
+export async function pickmanArrived(req, res, next) {
   try {
     const { id } = req.params;
     const order  = await Order.findById(id).select('+cod.otpHash');
     if (!order) throw new NotFoundError('Order not found');
 
-    order.timeline.push({ status: 'in_transit', note: 'Rider arrived at delivery point', actor: 'rider' });
+    order.timeline.push({ status: 'in_transit', note: 'Pickman arrived at delivery point', actor: 'Pickman' });
     await order.save();
 
     if (order.payment.method === 'cod' && order.cod?.otpHash) {
@@ -394,7 +409,7 @@ export async function riderArrived(req, res, next) {
     }
 
     const io = getSocketServer();
-    io?.to(`user:${order.customer}`).emit('rider:arrived', { orderId: id });
+    io?.to(`user:${order.customer}`).emit('pickman:arrived', { orderId: id });
 
     ok(res, {
       message: order.payment.method === 'cod' ? 'OTP sent to customer.' : 'Arrival recorded.',
@@ -414,7 +429,7 @@ export async function getOrders(req, res, next) {
 
     if (req.user.role === 'customer')      filter.customer = req.user._id;
     else if (req.user.role === 'merchant') filter.merchant = req.user._id;
-    else if (req.user.role === 'rider')    filter.rider    = req.user._id;
+    else if (req.user.role === 'pickman')    filter.pickman    = req.user._id;
 
     if (status) filter.status = status;
 
@@ -424,7 +439,7 @@ export async function getOrders(req, res, next) {
         .skip(skip)
         .limit(parseInt(limit))
         .populate('customer', 'name phone')
-        .populate('rider',    'name phone rating')
+        .populate('pickman',    'name phone rating')
         .populate('pickup.zone',   'name')
         .populate('delivery.zone', 'name')
         .lean(),
@@ -442,7 +457,7 @@ export async function getOrderById(req, res, next) {
   try {
     const order = await Order.findById(req.params.id)
       .populate('customer', 'name phone email')
-      .populate('rider',    'name phone rating')
+      .populate('pickman',    'name phone rating')
       .populate('pickup.zone',   'name city')
       .populate('delivery.zone', 'name city');
 
@@ -451,7 +466,7 @@ export async function getOrderById(req, res, next) {
     const isParty = [
       order.customer?._id?.toString(),
       order.merchant?.toString(),
-      order.rider?._id?.toString(),
+      order.pickman?._id?.toString(),
     ].includes(req.user._id.toString());
 
     if (!isParty && !['admin', 'support'].includes(req.user.role))
@@ -511,11 +526,11 @@ export async function rateOrder(req, res, next) {
     order.ratingNote     = comment;
     await order.save();
 
-    if (order.rider) {
-      const rider     = await User.findById(order.rider);
-      const newTotal  = rider.totalRatings + 1;
-      const newRating = ((rider.rating * rider.totalRatings) + rating) / newTotal;
-      await User.findByIdAndUpdate(order.rider, {
+    if (order.pickman) {
+      const packageCategoryickman     = await User.findById(order.pickman);
+      const newTotal  = pickman.totalRatings + 1;
+      const newRating = ((pickman.rating * pickman.totalRatings) + rating) / newTotal;
+      await User.findByIdAndUpdate(order.pickman, {
         rating:       +newRating.toFixed(2),
         totalRatings: newTotal,
       });
@@ -540,7 +555,7 @@ export async function openDispute(req, res, next) {
     const isParty = [
       order.customer?.toString(),
       order.merchant?.toString(),
-      order.rider?.toString(),
+      order.pickman?.toString(),
     ].includes(req.user._id.toString());
     if (!isParty) throw new ForbiddenError('Not a party to this order');
 

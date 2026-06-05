@@ -473,3 +473,57 @@ Content-Type: application/json
 
 
 ###
+
+POST {{baseUrl}}/api/auth/rider/signup
+Content-Type: application/json
+
+{
+  "_id": {
+    "$oid": "6a08833ae604e7b49e14f40e"
+  },
+  "firstName": "Akinlabi",
+  "lastName": "John",
+  "email": "darkroomwebmailservice@gmail.com",
+  "phone": "09110339553",
+  "password": "$2b$12$AmBCp",
+  "city": "ibadan",
+  "status": "pending_kyc",
+  "isActive": true,
+  "emailVerified": true,
+  "loginAttempts": 0,
+  "passwordResetVerified": false,
+  "resetOtpAttempts": 0,
+  "resetOtpResendCount": 0,
+  "tokenVersion": 0,
+  "role": "rider",
+  "operatingZoneId": "69f296a3939ad811a2216fe9",
+  "vehicleType": "motorcycle",
+  "vehicleModel": "Honda CB123",
+  "plateNumber": "ABC234DE",
+  "nin": "91133234567",
+  "kyc": {
+    "status": "not_submitted"
+  },
+    "guarantorFullName": "Mrs Adebowale",
+    "guarantorPhone": "09155674401",
+    "guarantorRelationship": "Parent",
+    "callVerified": false,
+  "kycSubmitted": false,
+  "isOnline": false,
+  "permissions": [],
+  "rating": 5,
+  "totalRatings": 0,
+  "totalDeliveries": 0,
+  "completionRate": 100,
+  "createdAt": {
+    "$date": "2026-05-16T14:46:18.875Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-16T14:47:45.389Z"
+  },
+  "__v": 0
+}
+
+###
+
+GET {{baseUrl}}/api/auth/verify-email?token=a6eacc6a27ed3cc0244ea46aeca7a94de65ae4bc009cf8b0446d1a9b24115fbc

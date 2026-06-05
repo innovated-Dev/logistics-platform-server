@@ -43,8 +43,8 @@ export const resolveDisputeSchema = Joi.object({
   }),
   refundTarget: Joi.when('refundAmount', {
     is:        Joi.number().positive().exist(),
-    then:      Joi.string().valid('customer', 'rider').required().messages({
-      'any.only':     'Refund target must be either customer or rider',
+    then:      Joi.string().valid('customer', 'pickman').required().messages({
+      'any.only':     'Refund target must be either customer or pickman',
       'any.required': 'Refund target is required when a refund amount is specified',
     }),
     otherwise: Joi.optional(),
@@ -62,7 +62,7 @@ export const topupPoolSchema = Joi.object({
 
 // ── User list query params ──
 export const getUsersQuerySchema = Joi.object({
-  role:   Joi.string().valid('customer', 'merchant', 'rider', 'support').optional(),
+  role:   Joi.string().valid('customer', 'merchant', 'pickman', 'support').optional(),
   status: Joi.string().valid('active', 'suspended', 'pending_kyc').optional(),
   search: Joi.string().trim().max(100).optional().allow('', null),
   city:   Joi.string().trim().optional(),

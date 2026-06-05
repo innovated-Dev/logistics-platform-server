@@ -16,13 +16,14 @@ import {
   sendEmailVerification,
 } from '../../services/emailService.js';
 import { AuthError, ValidationError, NotFoundError } from '../../utils/errors.js';
-import { env } from '../../config/env.js';
+import env  from '../../config/env.js';
 import { notifyClient } from '../../sse/sseManager.js';
 
 const OTP_EXPIRY_MS  = 15 * 60 * 1000;
 const MAX_OTP_TRIES  = 5;
 const MAX_OTP_RESEND = 3;
 const RESEND_COOLDOWN = 60 * 1000;
+
 
 // ── POST /api/auth/refresh ──
 export async function refreshToken(req, res, next) {
@@ -127,6 +128,7 @@ export async function verifyEmail(req, res, next) {
 
     await notifyClient(user.email);
 
+    
     res.json({ 
       success: true, 
       token: generateAccessToken(user._id, user.role, user.tokenVersion ?? 0),

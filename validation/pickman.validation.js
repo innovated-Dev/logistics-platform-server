@@ -1,4 +1,4 @@
-// src/validation/rider.validation.js
+// src/validation/pickman.validation.js
 import Joi from 'joi';
 
 const ZONE_IDS = [
@@ -28,14 +28,6 @@ const ZONE_IDS = [
 
 const VEHICLE_TYPES = ['motorcycle', 'bicycle', 'van', 'car'];
 
-const KYC_DOCUMENT_TYPES = [
-  'nin_document',
-  'drivers_licence',
-  'vehicle_insurance',
-  'plate_photo',
-  'guarantor_form',
-];
-
 // ── Reusable Nigerian phone rule ──
 const nigerianPhone = Joi.string()
   .pattern(/^0[7-9][0-1]\d{8}$/)
@@ -47,7 +39,7 @@ const nigerianPhone = Joi.string()
   });
 
 // ── Auth ──
-export const riderSignupSchema = Joi.object({
+export const pickmanSignupSchema = Joi.object({
   // ── Personal info ──
   firstName: Joi.string().trim().min(2).max(50).required().messages({
     'string.min': 'First name must be at least 2 characters',
@@ -102,20 +94,28 @@ export const riderSignupSchema = Joi.object({
       'any.required': 'Vehicle type is required',
     }),
 
-  vehicleModel: Joi.string().trim().min(2).max(100).required().messages({
-    'string.min': 'Vehicle model must be at least 2 characters',
-    'string.empty': 'Vehicle model is required',
-    'any.required': 'Vehicle model is required',
-  }),
+  // Replace the current vehicleModel and plateNumber rules with:
 
-  plateNumber: Joi.string()
-    .trim()
-    .pattern(/^[A-Z]{2,4}[-\s]?\d{2,4}[-\s]?[A-Z]{1,3}$/i)
-    .required()
-    .messages({
-      'string.pattern.base': 'Please provide a valid plate number (e.g. ABC-123-DE)',
-      'string.empty': 'Plate number is required',
-      'any.required': 'Plate number is required',
+    vehicleModel: Joi.when('vehicleType', {
+      is:        'bicycle',
+      then:      Joi.string().optional().allow('', null),
+      otherwise: Joi.string().trim().min(2).max(100).required().messages({
+        'string.min':  'Vehicle model must be at least 2 characters',
+        'any.required':'Vehicle model is required for your vehicle type',
+      }),
+    }),
+
+    plateNumber: Joi.when('vehicleType', {
+      is:        'bicycle',
+      then:      Joi.string().optional().allow('', null),
+      otherwise: Joi.string()
+        .trim()
+        .pattern(/^[A-Z]{2,4}[-\s]?\d{2,4}[-\s]?[A-Z]{1,3}$/i)
+        .required()
+        .messages({
+          'string.pattern.base': 'Please provide a valid plate number (e.g. ABC-123-DE)',
+          'any.required':        'Plate number is required for your vehicle type',
+        }),
     }),
 
   // ── Identity ──
@@ -149,10 +149,15 @@ export const riderSignupSchema = Joi.object({
     'string.empty': 'Guarantor relationship is required',
     'any.required': 'Guarantor relationship is required',
   }),
+
+  guarantorAddress: Joi.string().trim().min(10).max(300).required().messages({
+  'string.min':  'Please provide a full address (at least 10 characters)',
+  'any.required':'Guarantor address is required',
+  }),
 });
 
 // ── Login ──
-export const riderLoginSchema = Joi.object({
+export const pickmanLoginSchema = Joi.object({
   email: Joi.string().email().lowercase().required().messages({
     'string.email': 'Please provide a valid email address',
     'string.empty': 'Email is required',
@@ -165,7 +170,7 @@ export const riderLoginSchema = Joi.object({
 });
 
 // ── Go online / offline ──
-export const riderStatusSchema = Joi.object({
+export const pickmanStatusSchema = Joi.object({
   isOnline: Joi.boolean().required().messages({
     'boolean.base': 'Online status must be a boolean',
     'any.required': 'Online status is required',
@@ -188,18 +193,6 @@ export const updateLocationSchema = Joi.object({
     'string.hex': 'Invalid order ID format',
     'string.length': 'Invalid order ID length',
   }),
-});
-
-// ── KYC document upload ──
-export const kycUploadSchema = Joi.object({
-  documentType: Joi.string()
-    .valid(...KYC_DOCUMENT_TYPES)
-    .required()
-    .messages({
-      'any.only': `Document type must be one of: ${KYC_DOCUMENT_TYPES.join(', ')}`,
-      'string.empty': 'Document type is required',
-      'any.required': 'Document type is required',
-    }),
 });
 
 // ── Guarantor details (standalone endpoint) ──

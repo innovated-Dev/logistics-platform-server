@@ -1,17 +1,17 @@
 // src/sockets/index.js — Socket.IO server initialisation and event registry.
 // Architecture: each connecting client joins a personal room (user:<id>).
-// Riders also join their city room (riders:<city>) for broadcast availability events.
+// pickmen also join their city room (pickmen:<city>) for broadcast availability events.
 // The Redis adapter (socket.io-redis) is used when REDIS_URL is set, which allows
 // Socket.IO to work correctly across multiple cluster workers / server instances.
 // Without the adapter, a user connected to worker A cannot receive events emitted
 // by a request handled by worker B — the Redis adapter bridges this via pub/sub.
 import { Server } from 'socket.io';
 import jwt        from 'jsonwebtoken';
-import { env }    from '../config/env.js';
+import env    from '../config/env.js';
 import { logger } from '../utils/logger.js';
 import Order      from '../models/Order.js';
 import User       from '../models/base/user.base.js';
-import { assignRiderToOrder } from '../services/orderService.js';
+import { assignPickmanToOrder } from '../services/orderService.js';
 
 let _io = null;
 
@@ -76,12 +76,12 @@ export function initSocketIO(httpServer) {
     // Every user joins their personal room immediately
     socket.join(`user:${user._id}`);
 
-    // Riders also join city-wide room (for broadcast job availability)
-    if (user.role === 'rider') {
-      socket.join(`riders:${user.city}`);
+    // pickmen also join city-wide room (for broadcast job availability)
+    if (user.role === 'pickman') {
+      socket.join(`pickmen:${user.city}`);
     }
 
-    // ── Rider: subscribe to an order's real-time updates ──
+    // ── pickman: subscribe to an order's real-time updates ──
     socket.on('watch:order', (orderId) => {
       if (!orderId) return;
       socket.join(`order:${orderId}`);
@@ -92,19 +92,19 @@ export function initSocketIO(httpServer) {
       socket.leave(`order:${orderId}`);
     });
 
-    // ── Rider: broadcast GPS position ──
-    // Called by the rider's app on a timer (every 3–5 seconds during active delivery).
+    // ── pickman: broadcast GPS position ──
+    // Called by the pickman's app on a timer (every 3–5 seconds during active delivery).
     // The server forwards to the order room AND persists to gpsTrail.
-    socket.on('rider:location', async ({ orderId, lat, lng }) => {
+    socket.on('pickman:location', async ({ orderId, lat, lng }) => {
       if (!lat || !lng || !orderId) return;
 
       // Forward to all watchers of this order in real time
-      socket.to(`order:${orderId}`).emit('rider:moved', { lat, lng, riderId: user._id });
+      socket.to(`order:${orderId}`).emit('pickman:moved', { lat, lng, pickmanId: user._id });
 
       // Persist to GPS trail (evidence record) — fire and forget
       Order.findOneAndUpdate(
-        { _id: orderId, rider: user._id, status: { $in: ['assigned','pickup_in_progress','picked_up','in_transit'] } },
-        { $push: { gpsTrail: { lat, lng, timestamp: new Date() } }, $set: { 'rider.currentLocation': { lat, lng } } }
+        { _id: orderId, pickman: user._id, status: { $in: ['assigned','pickup_in_progress','picked_up','in_transit'] } },
+        { $push: { gpsTrail: { lat, lng, timestamp: new Date() } }, $set: { 'pickman.currentLocation': { lat, lng } } }
       ).catch(err => logger.error(`GPS persist failed: ${err.message}`));
 
       // Also update the User's current location for matching queries
@@ -113,36 +113,36 @@ export function initSocketIO(httpServer) {
       }).catch(() => {});
     });
   
-    // ── Rider: accept a job offer ──
+    // ── pickman: accept a job offer ──
   socket.on('job:accept', async ({ orderId }, ack) => {
     try {
-      const result = await assignRiderToOrder(orderId, user);
+      const result = await assignPickmanToOrder(orderId, user);
       if (typeof ack === 'function') ack({ success: true, ...result });
     } catch (err) {
       if (typeof ack === 'function') ack({ success: false, error: err.message });
     }
   });
 
-    // ── Rider: decline a job offer ──
+    // ── pickman: decline a job offer ──
     socket.on('job:decline', async ({ orderId }, ack) => {
       await Order.updateOne(
-        { _id: orderId, 'assignmentLog.rider': user._id, 'assignmentLog.response': 'pending' },
+        { _id: orderId, 'assignmentLog.pickman': user._id, 'assignmentLog.response': 'pending' },
         { $set: { 'assignmentLog.$.response': 'declined', 'assignmentLog.$.respondedAt': new Date() } }
       ).catch(() => {});
       if (typeof ack === 'function') ack({ success: true });
     });
 
-    // ── Rider: update status (online/offline) ──
-    socket.on('rider:status', async ({ isOnline }) => {
+    // ── pickman: update status (online/offline) ──
+    socket.on('pickman:status', async ({ isOnline }) => {
       await User.findByIdAndUpdate(user._id, { isOnline, lastSeen: new Date() }).catch(() => {});
-      socket.to(`riders:${user.city}`).emit('rider:status_changed', { riderId: user._id, isOnline });
+      socket.to(`pickmen:${user.city}`).emit('pickman:status_changed', { pickmanId: user._id, isOnline });
     });
 
     // ── Disconnect ──
     socket.on('disconnect', async (reason) => {
       logger.debug(`Socket disconnected: ${socket.id} | user:${user._id} | reason:${reason}`);
-      // Mark rider offline if they disconnect without explicitly going offline
-      if (user.role === 'rider') {
+      // Mark pickman offline if they disconnect without explicitly going offline
+      if (user.role === 'pickman') {
         await User.findByIdAndUpdate(user._id, { isOnline: false, lastSeen: new Date() }).catch(() => {});
       }
     });

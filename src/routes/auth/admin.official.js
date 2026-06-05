@@ -34,8 +34,8 @@ router.get('/finance',  getFinance);
 
 // ── KYC ───────────────────────────────────────────────────────────────────
 router.get('/kyc-queue',                          getKycQueue);
-router.patch('/riders/:riderId/kyc-approve',      approveKyc);
-router.patch('/riders/:riderId/kyc-reject',       rejectKyc);
+router.patch('/pickmans/:pickmanId/kyc-approve',      approveKyc);
+router.patch('/pickmans/:pickmanId/kyc-reject',       rejectKyc);
 
 // ── User management ────────────────────────────────────────────────────────
 router.get('/users',                              getUsers);

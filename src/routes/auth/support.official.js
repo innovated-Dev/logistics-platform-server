@@ -8,7 +8,7 @@ import { apiLimiter }  from '../../middleware/rateLimiter.js';
 import Ticket          from '../../models/Ticket.js';
 import { ok, created } from '../../utils/response.js';
 import { NotFoundError } from '../../utils/errors.js';
-import { env }         from '../../config/env.js';
+import  env        from '../../config/env.js';
 import { logger }      from '../../utils/logger.js';
 
 const router = Router();

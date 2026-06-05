@@ -5,7 +5,7 @@
 //   3. Caching (zone lookups, platform config)
 //   4. Pub/sub for Socket.IO adapter in cluster mode
 import Redis  from 'ioredis';
-import { env } from './env.js';
+import  env   from './env.js';
 import { logger } from '../utils/logger.js';
 
 let _client = null;

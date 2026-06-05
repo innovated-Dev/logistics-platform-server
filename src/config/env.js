@@ -1,6 +1,7 @@
 // src/config/env.js — Environment validation & typed config
 // The app exits at startup rather than failing at runtime on a missing key.
-import 'dotenv/config';
+// NOTE: Environment is loaded in server.js (import 'dotenv/config')
+// This file only validates and exports the typed env config
 
 const REQUIRED = [
   'MONGODB_URI','JWT_SECRET', 'JWT_EXPIRE', 'REFRESH_TOKEN_SECRET', 'REFRESH_TOKEN_EXPIRE',
@@ -10,6 +11,10 @@ const REQUIRED = [
   'CLOUDINARY_CLOUD_NAME','CLOUDINARY_API_KEY','CLOUDINARY_API_SECRET',
   'TERMII_API_KEY','SMTP_HOST','SMTP_USER','BREVO_APIKEY', 'EMAIL_FROM',
   'REDIS_URL','FRONTEND_URL', 'FIELD_ENCRYPTION_KEY',
+  'SMILE_PARTNER_ID',
+  'SMILE_API_KEY',
+  'B2_ENDPOINT','B2_REGION','B2_APPLICATION_KEY_ID','B2_APPLICATION_KEY','B2_BUCKET_NAME',
+  'B2_BUCKET_ID'
 ];
 
 export function validateEnv() {
@@ -67,16 +72,19 @@ export function validateEnv() {
  */
 
 
-export const env = {
+const env = {
   NODE_ENV:    process.env.NODE_ENV || 'development',
   PORT:        parseInt(process.env.PORT || '4000'),
   WORKERS:     parseInt(process.env.CLUSTER_WORKERS || '0'), // 0 = auto (CPU count)
   MONGODB_URI: process.env.MONGODB_URI,
   REDIS_URL:   process.env.REDIS_URL,
 
-  JWT_SECRET:           process.env.JWT_SECRET,
-  JWT_EXPIRES:          process.env.JWT_EXPIRES_IN || '7d',
-  JWT_REFRESH_EXPIRES:  process.env.JWT_REFRESH_EXPIRES_IN || '30d',
+ JWT_SECRET:           process.env.JWT_SECRET,
+  REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,     
+  JWT_RESET_SECRET:     process.env.JWT_RESET_SECRET,           
+  JWT_EXPIRE:           process.env.JWT_EXPIRE || '15m',        
+  REFRESH_TOKEN_EXPIRE: process.env.REFRESH_TOKEN_EXPIRE || '7d', 
+  JWT_RESET_EXPIRE:     process.env.JWT_RESET_EXPIRE || '15m',   
   FIELD_ENCRYPTION_KEY: process.env.FIELD_ENCRYPTION_KEY,
 
   PAYSTACK_SECRET: process.env.PAYSTACK_SECRET_KEY,
@@ -110,6 +118,18 @@ export const env = {
   LATE_CANCEL_RATE:  0.5,   // customer charged 50% of fee on late cancel
   COMP_POOL_FIXED:   300,   // ₦ paid from pool to rider on early cancel
 
+  SMILE_PARTNER_ID:    process.env.SMILE_PARTNER_ID,
+  SMILE_API_KEY:       process.env.SMILE_API_KEY,
+  B2_ENDPOINT:         process.env.B2_ENDPOINT,
+  B2_REGION:           process.env.B2_REGION,
+  B2_APPLICATION_KEY_ID:    process.env.B2_APPLICATION_KEY_ID,
+  B2_APPLICATION_KEY:       process.env.B2_APPLICATION_KEY,
+  B2_BUCKET_NAME:           process.env.B2_BUCKET_NAME,
+  B2_BUCKET_ID:             process.env.B2_BUCKET_ID,
+
   isProd: () => process.env.NODE_ENV === 'production',
   isDev:  () => process.env.NODE_ENV !== 'production',
 };
+
+
+export default env ;

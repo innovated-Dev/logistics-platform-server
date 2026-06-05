@@ -80,3 +80,5 @@ sessionSchema.index({ userId: 1, isRevoked: 1 });
 sessionSchema.index({ family: 1, isRevoked: 1 });
 
 export const Session = mongoose.model('Session', sessionSchema);
+
+

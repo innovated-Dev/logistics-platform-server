@@ -151,7 +151,7 @@ export const openDisputeSchema = Joi.object({
   }),
 });
 
-// ── Rider submits a bid on a merchant open-bid order ──
+// ── Pickman submits a bid on a merchant open-bid order ──
 export const submitBidSchema = Joi.object({
   amount: Joi.number().positive().required().messages({
     'number.positive': 'Bid amount must be a positive number',

@@ -2,9 +2,9 @@
 // Termii is the recommended provider for Nigerian delivery platforms
 // because it supports generic SMS, branded sender IDs (OffScape),
 // and native OTP APIs with server-side PIN management.
+import env  from '../config/env.js';
 import axios    from 'axios';
 import bcrypt   from 'bcryptjs';
-import { env }  from '../config/env.js';
 import { logger } from '../utils/logger.js';
 
 const BASE = 'https://api.ng.termii.com/api';
@@ -48,15 +48,15 @@ export async function verifyOTP(inputPin, storedHash) {
 
 // ── Key notification helpers ──
 
-export async function smsOrderPlaced(phone, orderRef, riderName) {
+export async function smsOrderPlaced(phone, orderRef, pickmanName) {
   await sendSMS(phone,
-    `OffScape: Order ${orderRef} placed! ${riderName ? `Rider ${riderName} is on the way.` : 'Finding you a rider now.'} Track in the app.`
+    `OffScape: Order ${orderRef} placed! ${pickmanName ? `pickman ${pickmanName} is on the way.` : 'Finding you a pickman now.'} Track in the app.`
   );
 }
 
-export async function smsRiderAssigned(phone, riderName, riderPhone, orderRef) {
+export async function smsPickmanAssigned(phone, pickmanName, pickmanPhone, orderRef) {
   await sendSMS(phone,
-    `OffScape: Rider ${riderName} (${riderPhone}) is heading to pick up your order ${orderRef}. Call them directly if needed.`
+    `OffScape: pickman ${pickmanName} (${pickmanPhone}) is heading to pick up your order ${orderRef}. Call them directly if needed.`
   );
 }
 
@@ -66,7 +66,7 @@ export async function smsOrderDelivered(phone, orderRef) {
   );
 }
 
-export async function smsRiderPayout(phone, amount, orderRef) {
+export async function smsPickmanPayout(phone, amount, orderRef) {
   await sendSMS(phone,
     `OffScape: ₦${amount.toLocaleString()} credited to your wallet for ${orderRef}. Well done! Open the app to withdraw.`
   );
@@ -74,7 +74,7 @@ export async function smsRiderPayout(phone, amount, orderRef) {
 
 export async function smsCodOtp(phone, otp) {
   await sendSMS(phone,
-    `OffScape Delivery OTP: ${otp}. Your rider is at the door. Share this 6-digit code with them to confirm delivery. Do NOT share it before delivery.`
+    `OffScape Delivery OTP: ${otp}. Your pickman is at the door. Share this 6-digit code with them to confirm delivery. Do NOT share it before delivery.`
   );
 }
 

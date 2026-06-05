@@ -1,30 +1,31 @@
 // src/services/orderService.js
 // Pure business logic shared between the HTTP controller and the Socket.IO handler.
 // No Express req/res dependencies here — callers pass in plain values.
+
 import Order  from '../models/Order.js';
 import User   from '../models/base/user.base.js';
 import { getSocketServer } from '../sockets/index.js';
-import { smsRiderAssigned } from './smsService.js';
+import { smsPickmanAssigned } from './smsService.js';
 import { ValidationError }  from '../utils/errors.js';
 
 /**
- * Atomically assigns a rider to an order.
+ * Atomically assigns a Pickman to an order.
  * Called by both acceptOrder (HTTP) and job:accept (Socket).
  *
  * @param {string|ObjectId} orderId
- * @param {object}          rider   — the full user doc (must have _id, fullName, phone, vehicleType, rating)
+ * @param {object}          pickman   — the full user doc (must have _id, fullName, phone, vehicleType, rating)
  * @returns {object}                — { order, message }
  * @throws  ValidationError         — if the order is already taken or gone
  */
-export async function assignRiderToOrder(orderId, rider) {
+export async function assignPickmanToOrder(orderId, pickman) {
   const io = getSocketServer();
 
-  // Atomic: only the first rider to hit this wins
+  // Atomic: only the first Pickman to hit this wins
   const order = await Order.findOneAndUpdate(
     { _id: orderId, status: 'pending' },
     {
-      $set:  { rider: rider._id, status: 'assigned' },
-      $push: { timeline: { status: 'assigned', note: 'Rider accepted', actor: 'rider' } },
+      $set:  { pickman: pickman._id, status: 'assigned' },
+      $push: { timeline: { status: 'assigned', note: 'Pickman accepted', actor: 'Pickman' } },
     },
     { new: true }
   ).populate('customer', 'firstName phone');
@@ -35,7 +36,7 @@ export async function assignRiderToOrder(orderId, rider) {
 
   // Update assignment log
   await Order.updateOne(
-    { _id: orderId, 'assignmentLog.rider': rider._id },
+    { _id: orderId, 'assignmentLog.pickman': pickman._id },
     {
       $set: {
         'assignmentLog.$.response':    'accepted',
@@ -45,20 +46,20 @@ export async function assignRiderToOrder(orderId, rider) {
   );
 
   // Notify customer via socket + SMS
-  io?.to(`user:${order.customer._id}`).emit('order:rider_assigned', {
+  io?.to(`user:${order.customer._id}`).emit('order:pickman_assigned', {
     orderId,
-    rider: {
-      name:        rider.fullName,
-      phone:       rider.phone,
-      vehicleType: rider.vehicleType,
-      rating:      rider.rating,
+    pickman: {
+      name:        pickman.fullName,
+      phone:       pickman.phone,
+      vehicleType: pickman.vehicleType,
+      rating:      pickman.rating,
     },
   });
 
-  smsRiderAssigned(
+  smsPickmanAssigned(
     order.customer.phone,
-    rider.fullName,
-    rider.phone,
+    pickman.fullName,
+    Pickman.phone,
     order.orderRef
   );
 

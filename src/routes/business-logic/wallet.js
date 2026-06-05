@@ -1,6 +1,6 @@
 // src/routes/wallet.routes.js
 // Wallet top-up, withdrawal, airtime conversion, COD settlement.
-// authenticate runs on all routes; rider-only routes have an extra guard.
+// authenticate runs on all routes; pickman-only routes have an extra guard.
 import { Router } from 'express';
 import { authenticate, requireRole } from '../../middleware/auth.js';
 import { apiLimiter, paymentLimiter } from '../../middleware/rateLimiter.js';
@@ -44,9 +44,9 @@ router.post('/withdraw',     paymentLimiter, withdraw);
 // POST /api/wallet/airtime — convert airtime to wallet cash
 router.post('/airtime',      apiLimiter,     convertAirtime);
 
-// GET  /api/wallet/cod-debit   — rider sees outstanding platform fee
-// POST /api/wallet/settle-cod  — rider clears COD fee from wallet balance
-router.get('/cod-debit',   requireRole('rider'), apiLimiter,     getCodDebit);
-router.post('/settle-cod', requireRole('rider'), paymentLimiter, settleCodDebit);
+// GET  /api/wallet/cod-debit   — pickman sees outstanding platform fee
+// POST /api/wallet/settle-cod  — pickman clears COD fee from wallet balance
+router.get('/cod-debit',   requireRole('pickman'), apiLimiter,     getCodDebit);
+router.post('/settle-cod', requireRole('pickman'), paymentLimiter, settleCodDebit);
 
 export default router;

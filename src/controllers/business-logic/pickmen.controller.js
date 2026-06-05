@@ -21,6 +21,7 @@ const KYC_FIELDS = {
   guarantor_form:   'kyc.guarantorForm',
 };
 
+
 // ── POST /api/riders/kyc/upload ──
 export async function uploadKycDocument(req, res) {
   const { documentType } = req.body;

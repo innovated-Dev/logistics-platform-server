@@ -14,7 +14,7 @@ const router = Router();
 router.use(apiLimiter);
 
 // GET /api/zones?city=ibadan
-// Public — rider signup + customer order form fetch zones here
+// Public — pickman signup + customer order form fetch zones here
 router.get('/', optionalAuth, getZones);
 
 // GET /api/zones/resolve?lat=7.38&lng=3.95

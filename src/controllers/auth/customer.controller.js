@@ -6,7 +6,7 @@ import User        from '../../models/base/user.base.js';
 import { issueTokens } from './auth.base.js';
 import { sendEmailVerification } from '../../services/emailService.js';
 import { ConflictError, AuthError } from '../../utils/errors.js';
-import { env } from '../../config/env.js';
+import env  from '../../config/env.js';
 
 // ── POST /api/auth/customer/signup ──
 // Validation: customerSignupSchema applied on route via validate() middleware

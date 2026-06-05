@@ -1,6 +1,6 @@
 // src/utils/encryption.util.js
 import crypto from 'crypto';
-import { env } from '../config/env.js';
+import env  from '../config/env.js';
 const ALGORITHM  = 'aes-256-gcm';
 const KEY_HEX    = env.FIELD_ENCRYPTION_KEY; // must be 64 hex chars = 32 bytes
 

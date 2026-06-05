@@ -1,4 +1,4 @@
-// src/models/Zone.js — Geographic zones for rider-order matching.
+// src/models/Zone.js — Geographic zones for pickman-order matching.
 // Each zone is a GeoJSON Polygon. MongoDB's 2dsphere index on the boundary
 // field powers the $geoIntersects query that resolves any coordinate pair
 // to its containing zone in a single fast indexed lookup.
@@ -17,7 +17,7 @@ const zoneSchema = new mongoose.Schema({
     lng: { type: Number, required: true },
   },
   isActive: { type: Boolean, default: true },
-  ridersOnline: { type: Number, default: 0 }, // denormalized counter updated by cron
+  pickmansOnline: { type: Number, default: 0 }, // denormalized counter updated by cron
 }, { timestamps: true });
 
 // 2dsphere index enables geo queries like $geoIntersects and $near

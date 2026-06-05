@@ -6,7 +6,7 @@ import mongoose from 'mongoose';
 
 const messageSchema = new mongoose.Schema({
   sender:    { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  senderRole:{ type: String },   // 'customer'|'merchant'|'rider'|'ai'|'agent'|'admin'
+  senderRole:{ type: String },   // 'customer'|'merchant'|'pickman'|'ai'|'agent'|'admin'
   body:      { type: String, required: true },
   isAI:      { type: Boolean, default: false },
 }, { timestamps: true });
@@ -23,7 +23,7 @@ const ticketSchema = new mongoose.Schema({
 
   category:  {
     type: String,
-    enum: ['delivery_issue','payment','refund','rider_complaint','account','other'],
+    enum: ['delivery_issue','payment','refund','pickman_complaint','account','other'],
     required: true,
   },
   subject:   { type: String, required: true },

@@ -1,11 +1,11 @@
 // src/services/zoneEngine.js
 // The zone system is the most Nigeria-specific feature on the platform.
 // It translates between text addresses and geographic zone polygons,
-// and powers the rider-order matching algorithm.
+// and powers the pickman-order matching algorithm.
+import env  from '../config/env.js';
 import axios   from 'axios';
 import Zone    from '../models/Zone.js';
 import User    from '../models/base/user.base.js';
-import { env } from '../config/env.js';
 import { cacheGet, cacheSet } from '../config/redis.js';
 import { logger } from '../utils/logger.js';
 
@@ -129,14 +129,14 @@ export async function resolveZone(lat, lng) {
   return null;
 }
 
-// ── Find available riders for a pickup zone ──
-// Returns the N nearest online, verified riders in the zone.
+// ── Find available pickmen for a pickup zone ──
+// Returns the N nearest online, verified pickmen in the zone.
 // This is the inner loop of the dispatch algorithm — it runs fast
 // because of compound indexes on (isOnline, role, city).
-export async function findNearestRiders(pickupZoneId, pickupCoords, limit = 3) {
-  // 1. Get all online, active riders whose zones include the pickup zone
+export async function findNearestPickmen(pickupZoneId, pickupCoords, limit = 3) {
+  // 1. Get all online, active pickmen whose zones include the pickup zone
   const candidates = await User.find({
-    role:           'rider',
+    role:           'pickman',
     status:         'active',
     isOnline:       true,
     operatingZones: pickupZoneId,
@@ -148,12 +148,12 @@ export async function findNearestRiders(pickupZoneId, pickupCoords, limit = 3) {
 
   if (!candidates.length) return [];
 
-  // 2. Filter out riders currently on an active delivery
+  // 2. Filter out pickmen currently on an active delivery
   const { default: Order } = await import('../models/Order.js');
-  const busyRiderIds = await Order.distinct('rider', {
+  const busyPickmanIds = await Order.distinct('pickman', {
     status: { $in: ['assigned','pickup_in_progress','picked_up','in_transit'] },
   });
-  const busySet = new Set(busyRiderIds.map(id => id.toString()));
+  const busySet = new Set(busyPickmanIds.map(id => id.toString()));
 
   const available = candidates.filter(r => !busySet.has(r._id.toString()));
 

@@ -3,9 +3,10 @@
 // The frontend calculator is display-only; the backend recalculates
 // independently before creating any order. A user manipulating the
 // frontend values cannot change what the backend charges.
+
+import env   from '../config/env.js';
 import axios     from 'axios';
 import Config    from '../models/Config.js';
-import { env }   from '../config/env.js';
 import { cacheGet, cacheSet } from '../config/redis.js';
 import { logger } from '../utils/logger.js';
 

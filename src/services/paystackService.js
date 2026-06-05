@@ -2,9 +2,10 @@
 // All Paystack API calls are centralised here.
 // Never call Paystack directly from a controller — this layer
 // adds logging, error normalisation, and retry logic.
+
+import  env   from '../config/env.js';
 import axios    from 'axios';
 import crypto   from 'crypto';
-import { env }  from '../config/env.js';
 import { logger } from '../utils/logger.js';
 
 const PS  = axios.create({
@@ -73,7 +74,7 @@ export async function createTransferRecipient({ name, accountNumber, bankCode })
   return data.data; // { recipient_code }
 }
 
-// ── Initiate transfer to rider ──
+// ── Initiate transfer to pickman ──
 export async function initiateTransfer({ amount, recipientCode, reason, reference }) {
   const { data } = await psCall(() => PS.post('/transfer', {
     source:         'balance',

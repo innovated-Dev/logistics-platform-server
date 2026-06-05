@@ -28,9 +28,10 @@ export const validate = (schema, property = 'body') => {
         errors:  details,
       });
     }
+    console.log(req[property]);
 
-   if(req[property] === "body") req.body = value;
-   if((req[property] === "query") || (req[property] === "params")) req.sanitizeData = value;
+   if(property === "body") req.body = value;
+   if((property === "query") || (property === "params")) req.sanitizedData = value;
    
     next();
   };

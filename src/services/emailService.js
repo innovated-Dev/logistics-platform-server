@@ -1,5 +1,5 @@
+import env         from '../config/env.js';
 import { BrevoClient } from '@getbrevo/brevo';
-import { env }         from '../config/env.js';
 import { logger }      from '../utils/logger.js';
 
 // New SDK uses a single unified client — no more separate API class instances
@@ -124,7 +124,7 @@ export async function sendResendResetOTP(email, firstName, otp, resendsRemaining
 }
 
 export async function sendKycApproved(email, firstName) {    
-    const text = `Hello ${firstName}, great news! Your identity documents have been reviewed and your OffScape rider account is now fully verified. You can sign in, go online, and start accepting delivery jobs right away. Welcome to the OffScape network — visit ${env.FRONTEND_URL}/signin to get started.`;
+    const text = `Hello ${firstName}, great news! Your identity documents have been reviewed and your OffScape pickman account is now fully verified. You can sign in, go online, and start accepting delivery jobs right away. Welcome to the OffScape network — visit ${env.FRONTEND_URL}/signin to get started.`;
     const html = `
     <div style="font-family:sans-serif;max-width:540px;margin:0 auto;padding:32px">
       <div style="font-size:24px;font-weight:800;color:#e74c3c">OffScape Logistics</div>
@@ -136,7 +136,7 @@ export async function sendKycApproved(email, firstName) {
     </div>
   `;
 
-  await send(email, 'Your OffScape rider account is approved! 🎉', text, html);
+  await send(email, 'Your OffScape pickman account is approved! 🎉', text, html);
 
 }
 

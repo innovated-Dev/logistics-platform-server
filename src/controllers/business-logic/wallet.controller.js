@@ -6,7 +6,7 @@ import {
   initializePayment, verifyPayment, verifyBankAccount,
   getBanks, createTransferRecipient, initiateTransfer,
 } from '../../services/paystackService.js';
-import { env }               from '../../config/env.js';
+import env              from '../../config/env.js';
 import { cacheGet, cacheSet } from '../../config/redis.js';
 import { ValidationError, PaymentError, NotFoundError } from '../../utils/errors.js';
 import { ok }  from '../../utils/response.js';
@@ -113,7 +113,7 @@ export async function withdraw(req, res, next) {
     if (!wallet || wallet.balance < amount)
       throw new PaymentError(`Insufficient balance. Available: ₦${(wallet?.balance || 0).toLocaleString()}`);
 
-    if (req.user.role === 'rider' && (wallet.codPendingDebit || 0) > 0)
+    if (req.user.role === 'pickman' && (wallet.codPendingDebit || 0) > 0)
       throw new ValidationError(
         `You have ₦${wallet.codPendingDebit.toLocaleString()} in uncleared COD fees. Settle them first.`
       );

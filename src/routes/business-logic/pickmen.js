@@ -1,5 +1,5 @@
-// src/routes/riders.routes.js
-// All rider-specific endpoints. Every route requires role === 'rider'.
+// src/routes/pickmans.routes.js
+// All pickman-specific endpoints. Every route requires role === 'pickman'.
 import { Router }   from 'express';
 import { authenticate, requireRole } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
@@ -11,8 +11,8 @@ import {
   updateOnlineStatus,
   updateLocation,
   getEarnings,
-} from '../../controllers/business-logic/riders.controller.js';
-import { updateLocationSchema } from '../../../validation/rider.validation.js';
+} from '../../controllers/business-logic/pickmen.controller.js';
+import { updateLocationSchema } from '../../../validation/pickman.validation.js';
 
 // Hard-block rate limiter for uploads (prevent KYC doc spam)
 import rateLimit from 'express-rate-limit';
@@ -30,9 +30,9 @@ const uploadLimiter = rateLimit({
 });
 
 const router = Router();
-router.use(authenticate, requireRole('rider'));
+router.use(authenticate, requireRole('pickman'));
 
-// POST /api/riders/kyc/upload — multipart upload of one KYC document
+// POST /api/pickmans/kyc/upload — multipart upload of one KYC document
 router.post(
   '/kyc/upload',
   uploadLimiter,
@@ -41,13 +41,13 @@ router.post(
   uploadKycDocument
 );
 
-// GET /api/riders/kyc/status
+// GET /api/pickmans/kyc/status
 router.get('/kyc/status', apiLimiter, getKycStatus);
 
-// PATCH /api/riders/status — go online or offline
+// PATCH /api/pickmans/status — go online or offline
 router.patch('/status', apiLimiter, updateOnlineStatus);
 
-// PATCH /api/riders/location — push GPS coordinates during active delivery
+// PATCH /api/pickmans/location — push GPS coordinates during active delivery
 router.patch(
   '/location',
   apiLimiter,
@@ -55,7 +55,7 @@ router.patch(
   updateLocation
 );
 
-// GET /api/riders/earnings?period=today|week|month|all
+// GET /api/pickmans/earnings?period=today|week|month|all
 router.get('/earnings', apiLimiter, getEarnings);
 
 export default router;

@@ -8,7 +8,8 @@ import helmet      from 'helmet';
 import cors        from 'cors';
 import morgan      from 'morgan';
 
-import { validateEnv, env }              from './src/config/env.js';
+import { validateEnv }              from './src/config/env.js';
+import env from './src/config/env.js';
 import { connectDB }                     from './src/config/database.js';
 import { connectRedis }                  from './src/config/redis.js';
 import { initSocketIO }                  from './src/sockets/index.js';
@@ -84,9 +85,9 @@ app.get('/health', (_req, res) => res.json({
 
 // ── 10. All API routes via main router ──
 // main.routes.js mounts:
-//   /api/auth        → auth/main.routes.js  (customer / merchant / rider / common)
+//   /api/auth        → auth/main.routes.js  (customer / merchant / pickman / common)
 //   /api/orders      → orders.routes.js
-//   /api/riders      → riders.routes.js
+//   /api/pickmen      → pickmen.routes.js
 //   /api/wallet      → wallet.routes.js
 //   /api/zones       → zones.routes.js
 //   /api/support     → support.routes.js

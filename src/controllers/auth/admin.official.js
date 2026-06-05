@@ -1,5 +1,4 @@
 // src/controllers/admin.controller.js
-// FIX: was importing from '../models/User.js' — updated to base discriminator model
 import User   from '../../models/base/user.base.js';
 import Order  from '../../models/Order.js';
 import Wallet from '../../models/Wallet.js';

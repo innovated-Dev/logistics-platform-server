@@ -2,43 +2,8 @@ import mongoose from 'mongoose';
 import User from '../base/user.base.js';
 import { encrypt, decrypt } from '../../utils/encryption.js';
 
-// ── KYC subdocument ──
-const kycDocSchema = new mongoose.Schema({
-  url:      String,
-  publicId: String,
-  verified: { type: Boolean, default: false },
-}, { _id: false });
-
-const kycSchema = new mongoose.Schema({
-  ninDocument:      kycDocSchema,
-  driversLicence:   kycDocSchema,
-  vehicleInsurance: kycDocSchema,
-  platePhoto:       kycDocSchema,
-  guarantorForm:    kycDocSchema,
-  status: {
-    type:    String,
-    enum:    ['not_submitted', 'pending', 'approved', 'rejected'],
-    default: 'not_submitted',
-  },
-  rejectionReason: String,
-  verifiedAt:      Date,
-  verifiedBy:      { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-}, { _id: false });
-
-// ── Guarantor subdocument ──
-const guarantorSchema = new mongoose.Schema({
-  fullName:       String,
-  phone:          String,
-  address:        String,
-  relationship:   String,
-  callVerified:   { type: Boolean, default: false },
-  callVerifiedAt: Date,
-  callVerifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  callNotes:      String,
-}, { _id: false });
-
-// ── Rider schema ──
-const IsriderSchema = new mongoose.Schema({
+// ── pickman schema ──
+const IspickmanSchema = new mongoose.Schema({
 
   // ── Primary address ──
   primaryAddress: {
@@ -66,16 +31,18 @@ const IsriderSchema = new mongoose.Schema({
     select: false,
   },
 
-  // ── KYC & guarantor ──
-  kyc:          kycSchema,
-  guarantor:    guarantorSchema,
+ // ── KYC Application reference ──
+  kycApplication: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'KycApplication' 
+  },
   kycSubmitted: { type: Boolean, default: false },
 
   // ── Real-time state ──
   isOnline: { type: Boolean, default: false },
   lastSeen: Date,
 
-  // ── Location: NO defaults — only set when rider sends GPS coords ──
+  // ── Location: NO defaults — only set when pickman sends GPS coords ──
   currentLocation: {
     type: {
       type:  String,
@@ -97,21 +64,21 @@ const IsriderSchema = new mongoose.Schema({
 });
 
 // ── Indexes ──
-IsriderSchema.index({ totalDeliveries: -1 });
-IsriderSchema.index({ completionRate: 1 });
-IsriderSchema.index({ isOnline: 1, city: 1 });
-// sparse: true — skips riders who have no location yet, prevents the GeoJSON error
-IsriderSchema.index({ currentLocation: '2dsphere' }, { sparse: true });
+IspickmanSchema.index({ totalDeliveries: -1 });
+IspickmanSchema.index({ completionRate: 1 });
+IspickmanSchema.index({ isOnline: 1, city: 1 });
+// sparse: true — skips pickmans who have no location yet, prevents the GeoJSON error
+IspickmanSchema.index({ currentLocation: '2dsphere' }, { sparse: true });
 
 // ── Encrypt NIN only when it changes ──
-IsriderSchema.pre('save', async function () {
+IspickmanSchema.pre('save', async function () {
   if (this.isModified('nin') && this.nin) {
     this.nin = encrypt(this.nin);
   }
 });
 
 // ── Decrypt NIN when needed ──
-IsriderSchema.virtual('ninDecrypted').get(function () {
+IspickmanSchema.virtual('ninDecrypted').get(function () {
   try {
     return this.nin ? decrypt(this.nin) : null;
   } catch {
@@ -119,5 +86,5 @@ IsriderSchema.virtual('ninDecrypted').get(function () {
   }
 });
 
-const Rider = User.discriminator('rider', IsriderSchema);
-export default Rider;
+const Pickman = User.discriminator('pickman', IspickmanSchema);
+export default Pickman;

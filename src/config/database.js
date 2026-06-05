@@ -3,7 +3,7 @@
 // for the initial connection so a temporary Atlas hiccup at startup
 // doesn't kill the process.
 import mongoose from 'mongoose';
-import { env }  from './env.js';
+import env    from './env.js';
 import { logger } from '../utils/logger.js';
 
 const OPTIONS = {

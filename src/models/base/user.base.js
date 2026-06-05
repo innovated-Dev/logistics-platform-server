@@ -149,7 +149,7 @@ userBaseSchema.methods.toSafeObject = function() {
     isOnline:       this.isOnline,
     rating:         this.rating,
     totalDeliveries:this.totalDeliveries,
-    kycStatus:      this.kyc?.status,
+    kycStatus:      this.status === 'pending_kyc' ? 'pending_kyc' : undefined,
     wallet:         this.wallet,
   };
 };

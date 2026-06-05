@@ -1,20 +1,22 @@
 // src/utils/jwt.js
+import env  from '../config/env.js';
 import jwt    from 'jsonwebtoken';
 import crypto from 'crypto';
-import { env } from '../config/env.js';
 
 const { JsonWebTokenError } = jwt;
 
 // ── Access Token ──
 // Carries userId, role, AND jti so Redis blocklist can kill it on logout
 // ── Access Token ──
-export function generateAccessToken(userId, role, tokenVersion = 0) {
+
+
+export function generateAccessToken(userId, role, tokenVersion = 0, extra = {}) {
   const jti = crypto.randomUUID();
   return jwt.sign(
-    { userId, role, jti, tokenVersion },  // ← add tokenVersion
-    env.JWT_SECRET,
-    { expiresIn: env.JWT_EXPIRE || '15m' }
-  );
+      { userId, role, jti, tokenVersion, ...extra },
+      env.JWT_SECRET,
+      { expiresIn: env.JWT_EXPIRE || '15m' }
+    );
 }
 
 export function verifyAccessToken(token) {

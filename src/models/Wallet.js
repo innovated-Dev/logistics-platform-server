@@ -1,7 +1,7 @@
 // src/models/Wallet.js
 // Think of this schema as three overlapping financial instruments in one:
 //   1. A regular user wallet (balance + transactions)
-//   2. A rider COD ledger (pending debits they owe the platform)
+//   2. A pickman COD ledger (pending debits they owe the platform)
 //   3. Platform reserve accounts (insurance pool, compensation pool)
 //      — these two exist on exactly one "platform" wallet record.
 //
@@ -26,7 +26,7 @@ const walletSchema = new mongoose.Schema({
 
   balance:         { type: Number, default: 0, min: 0 },
 
-  // Rider-specific: platform fee they collected as cash but haven't remitted yet
+  // pickman-specific: platform fee they collected as cash but haven't remitted yet
   codPendingDebit: { type: Number, default: 0 },
 
   // Platform-only: separate reserve accounts (stored on admin user's wallet)
@@ -35,7 +35,7 @@ const walletSchema = new mongoose.Schema({
 
   transactions: [transactionSchema],
 
-  // Bank account for rider withdrawals (verified via Paystack recipient)
+  // Bank account for pickman withdrawals (verified via Paystack recipient)
   bankDetails: {
     bankCode:        String,
     bankName:        String,

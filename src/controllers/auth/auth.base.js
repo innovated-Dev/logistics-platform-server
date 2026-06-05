@@ -4,8 +4,34 @@
 import crypto from 'crypto';
 import { Session }              from '../../models/Session.js';
 import { generateAccessToken, generateRefreshToken } from '../../utils/jwt.js';
-import { env }                  from '../../config/env.js';
+import env                from '../../config/env.js';
 import { getIPAddress }         from '../../utils/ip.js';
+
+// Builds role-specific JWT claims — only what each role actually needs.
+function buildTokenPayload(user) {
+  const base = {
+    status:    user.status,
+    firstName: user.firstName,
+    initials:  user.initials,
+  };
+
+  if (user.role === 'pickman') {
+    return {
+      ...base,
+      vehicleType:  user.vehicleType,
+      kycSubmitted: user.kycSubmitted,
+    };
+  }
+
+  if (user.role === 'merchant') {
+    return {
+      ...base,
+      businessName: user.businessName,
+    };
+  }
+
+  return base; // customer
+}
 
 /**
  * Creates a Session document, issues tokens, and sets the refresh cookie.
@@ -14,7 +40,7 @@ import { getIPAddress }         from '../../utils/ip.js';
 export async function issueTokens(res, user, req, rememberMe = false) {
   const family          = crypto.randomUUID();
   const rawRefresh      = generateRefreshToken(user._id, family);
-  const accessToken     = generateAccessToken(user._id, user.role, user.tokenVersion ?? 0 );   // ← add this argument);
+  const accessToken = generateAccessToken(user._id, user.role, user.tokenVersion ?? 0, buildTokenPayload(user));  // ← add this argument);
   const refreshTokenHash = crypto.createHash('sha256').update(rawRefresh).digest('hex');
 
   const ttlDays  = rememberMe ? 30 : 7;
@@ -29,7 +55,7 @@ export async function issueTokens(res, user, req, rememberMe = false) {
       userAgent: req.get('user-agent') || null,
       platform:  req.headers['x-platform'] || 'web',
     },
-    ipAddress:   getIPAddress(req),
+    ipAddress: getIPAddress(req.ip || req.headers['x-forwarded-for']?.split(',')[0] || 'unknown'),
     lastUsedAt:  new Date(),
     expiresAt,
   });

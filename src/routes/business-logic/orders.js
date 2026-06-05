@@ -12,7 +12,7 @@ import {
   getOrderById,
   cancelOrder,
   confirmDelivery,
-  riderArrived,
+  pickmanArrived,
   rateOrder,
   acceptOrder,
 } from '../../controllers/business-logic/orders.controller.js';
@@ -50,12 +50,12 @@ router.patch(
   confirmDelivery
 );
 
-// PATCH /api/orders/:id/arrived — rider marks arrival at delivery address
+// PATCH /api/orders/:id/arrived — pickman marks arrival at delivery address
 router.patch(
   '/:id/arrived',
   apiLimiter,
-  requireRole('rider'),
-  riderArrived
+  requireRole('pickman'),
+  pickmanArrived
 );
 
 // PATCH /api/orders/:id/rate — customer/merchant rates the delivery
@@ -66,21 +66,21 @@ router.patch(
   rateOrder
 );
 
-// POST /api/orders/:orderId/accept — rider accepts a dispatched job offer
+// POST /api/orders/:orderId/accept — pickman accepts a dispatched job offer
 // (also triggered via socket, but HTTP fallback is needed)
 router.post(
   '/:orderId/accept',
   apiLimiter,
-  requireRole('rider'),
+  requireRole('pickman'),
   acceptOrder
 );
 
-// POST /api/orders/:orderId/bid — rider submits bid on open-bid order
-import { submitBid } from '../../controllers/business-logic/riders.controller.js';
+// POST /api/orders/:orderId/bid — pickman submits bid on open-bid order
+import { submitBid } from '../../controllers/business-logic/pickmen.controller.js';
 router.post(
   '/:orderId/bid',
   apiLimiter,
-  requireRole('rider'),
+  requireRole('pickman'),
   submitBid
 );
 
