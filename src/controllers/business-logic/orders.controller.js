@@ -26,7 +26,7 @@ import { logger } from '../../utils/logger.js';
 export async function createOrder(req, res, next) {
   try {
     const io = getSocketServer();
-    const { pickup, delivery, package: pkg, payment, assignmentMode, budgetCap } = req.sanitizedData;
+    const { pickup, delivery, package: pkg, payment, assignmentMode, budgetCap } = req.body;
 
     const pickupCoords   = await geocodeAddress(pickup.address, req.user.city);
     const deliveryCoords = await geocodeAddress(delivery.address, req.user.city);

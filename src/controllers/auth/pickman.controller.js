@@ -154,6 +154,7 @@ export async function signInPickman(req, res, next) {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email, role: 'pickman' }).select('+password');
+    console.log(user);
     if (!user) return next(new AuthError('Invalid credentials'));
 
     //1. Locked check first - security priority
