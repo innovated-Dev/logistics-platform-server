@@ -31,7 +31,7 @@ export const createOrderSchema = Joi.object({
     senderName:  Joi.string().trim().min(2).max(100).required().messages({
       'string.empty': 'Sender name is required',
     }),
-    senderPhone: Joi.string().pattern(/^0[7-9][0-1]\d{8}$/).required().messages({
+    senderPhone: Joi.string().pattern(/^(?:\+234|0)[7-9][0-1]\d{8}$/).required().messages({
       'string.pattern.base': 'Please provide a valid sender phone number',
       'string.empty':        'Sender phone is required',
     }),
@@ -41,7 +41,7 @@ export const createOrderSchema = Joi.object({
     recipientName:  Joi.string().trim().min(2).max(100).required().messages({
       'string.empty': 'Recipient name is required',
     }),
-    recipientPhone: Joi.string().pattern(/^0[7-9][0-1]\d{8}$/).required().messages({
+    recipientPhone: Joi.string().pattern(/^(?:\+234|0)[7-9][0-1]\d{8}$/).required().messages({
       'string.pattern.base': 'Please provide a valid recipient phone number',
       'string.empty':        'Recipient phone is required',
     }),
